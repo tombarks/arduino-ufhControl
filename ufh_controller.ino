@@ -21,8 +21,6 @@ FilterOnePole subFloorTempFilter( LOWPASS, 0.001);
 FilterOnePole middleFloorTempFilter( LOWPASS, 0.001);
 FilterOnePole fiveVoltRail( LOWPASS, 0.001);
 
-boolean toggle1 = 0;
-
 // the setup function runs once when you press reset or power the board
 void setup() 
 {
@@ -43,13 +41,14 @@ void setup()
   TCCR1B = 0;// same for TCCR1B
   TCNT1  = 0;//initialize counter value to 0
   // set compare match register for 1hz increments
-  OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  OCR1A = 13107;// = (16*10^6) / (1*1024) - 1 (must be <65536)
   // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
+  //TCCR1B |= (1 << WGM12);
   // Set CS12 and CS10 bits for 1024 prescaler
   TCCR1B |= (1 << CS12) | (1 << CS10);  
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
+  TIMSK1 |= (1 << TOIE1);
   
   sei();
 }  
@@ -77,18 +76,10 @@ void loop() {
       if(incomingByte >= 0 && incomingByte <= 40)targetTemp = incomingByte;
     }    
     
-    if(middleFloorTempFilter.output() < targetTemp) 
-    {
-      digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
-      ufhActive = 1;
-    }
-    else if(middleFloorTempFilter.output() > (targetTemp + 0.5))
-    {
-      digitalWrite(13,LOW);
-      ufhActive = 0;
-    }
+    if(OCR1A > 0) ufhActive = 1;
+    else ufhActive = 0;
     
-    if(ufhActive == 1) onTimeCounter++;
+    if(ufhActive)onTimeCounter++;
   
     subFloorTempFilter.input(getTemp(0));
     middleFloorTempFilter.input(getTemp(1));
@@ -115,16 +106,15 @@ void loop() {
   }
 }
 
-ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
-  //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
-  if (toggle1){
-    digitalWrite(LED_BUILTIN,HIGH);
-    toggle1 = 0;
-  }
-  else{
-    digitalWrite(LED_BUILTIN,LOW);
-    toggle1 = 1;
-  }
+ISR(TIMER1_COMPA_vect){
+  digitalWrite(LED_BUILTIN,LOW);
+  digitalWrite(13,LOW);
+}
+
+ISR(TIMER1_OVF_vect)
+{
+  digitalWrite(LED_BUILTIN,HIGH);
+  digitalWrite(13, HIGH);
 }
 
 //--------------------------
