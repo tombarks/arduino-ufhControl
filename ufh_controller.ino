@@ -60,13 +60,16 @@ long lastMillis2 = 0;
 unsigned long onTimeCounter = 0;
 char outputString[200];
 int incomingByte = 0;
+volatile int runLoop = 0;
 
 // the loop function runs over and over again forever
 void loop() {
 
-  if(millis() - lastMillis2 >= 1000)
+  if(runLoop == 1)
   {
-    lastMillis2 = millis();
+    runLoop = 0;
+    
+    delay(100);
     
     //Check for new target temp
     if(Serial.available() > 0)
@@ -109,6 +112,7 @@ void loop() {
 ISR(TIMER1_COMPA_vect){
   digitalWrite(LED_BUILTIN,LOW);
   digitalWrite(13,LOW);
+  runLoop=1;
 }
 
 ISR(TIMER1_OVF_vect)
