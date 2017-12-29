@@ -17,9 +17,8 @@
 #include <ArduinoJson.h>
 
 // create a one pole (RC) lowpass filter
-FilterOnePole subFloorTempFilter( LOWPASS, 0.001);
-FilterOnePole middleFloorTempFilter( LOWPASS, 0.001);
-FilterOnePole fiveVoltRail( LOWPASS, 0.001);
+FilterOnePole subFloorTempFilter( LOWPASS, 0.0001);
+FilterOnePole middleFloorTempFilter( LOWPASS, 0.0001);
 
 // the setup function runs once when you press reset or power the board
 void setup() 
@@ -33,7 +32,6 @@ void setup()
 
   subFloorTempFilter.setToNewValue(getTemp(0));
   middleFloorTempFilter.setToNewValue(getTemp(1));
-  fiveVoltRail.setToNewValue(analogRead(2));
   
   cli();
   
@@ -86,7 +84,6 @@ void loop() {
   
     subFloorTempFilter.input(getTemp(0));
     middleFloorTempFilter.input(getTemp(1));
-    fiveVoltRail.input(analogRead(2));
   
     //Serial.print("Filtered Subfloor Temperature: "); Serial.print(subFloorTempFilter.output()); Serial.print("\n");
     //Serial.print("Filtered Middle Floor Temperature: "); Serial.print(middleFloorTempFilter.output()); Serial.print("\n");
@@ -99,7 +96,7 @@ void loop() {
       JsonObject& root = jsonBuffer.createObject();
       root["kitchen_sub_floor"] = subFloorTempFilter.output();
       root["kitchen_mid_floor"] = middleFloorTempFilter.output();
-      root["fiveVoltRail"] = fiveVoltRail.output();
+      root["fiveVoltRail"] = 0;
       root["ufhElementOnTimeSecs"] = onTimeCounter;
       root["ufh_element_active"] = ufhActive;
       root["ufhTgt"] = targetTemp;
