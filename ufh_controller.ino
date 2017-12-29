@@ -50,9 +50,13 @@ void setup() {
 }
 
 int ufhActive = 0;
-float targetTemp = 0.0;
 volatile unsigned long onTimeCounter = 0;
 unsigned long onTimeSeconds = 0;
+
+float targetTemp = 0.0;
+float minTargetTemp = 20.0;
+float maxTargetTemp = 35.0;
+float tempDeadband = 0.25;
 
 float dutyCycle = 0;
 
@@ -112,7 +116,27 @@ void loop() {
 
 //Compute duty
 void computeDuty() {
-  dutyCycle = (float) targetTemp;
+  static float integralDuty = 0.0;
+  
+  float baseDuty  = 0.0
+  
+  if(targetTemp > minTargetTemp)
+  {
+    baseDuty = 100.0 * ((targetTemp - minTargetTemp) / (maxTargetTemp - minTargetTemp))
+  }
+  
+  if(middleFloorTempFilter.output() < (targetTemp - tempDeadband))integralDuty += 0.05;
+  else if(middleFloorTempFilter.output() > (targetTemp + tempDeadband)integralDuty -= 0.05;
+  
+  if(integralDuty > 100.0)integralDuty = 100.0;
+  else if(integralDuty < -100.0)integralDuty = -100.0;
+  
+  float dutyCycleTemp = baseDuty + integralDuty;
+  
+  if(dutyCycleTemp > 100.0)dutyCycleTemp = 100.0;
+  else if(dutyCycleTemp < 0.0)dutyCycleTemp = 0;
+  
+  dutyCycle = dutyCycleTemp;  
 }
 
 //Set PWM timer
@@ -151,7 +175,8 @@ void getTarget() {
   //Check for new target temp
   if (Serial.available() > 0) {
     incomingByte = Serial.read();
-    if (incomingByte >= 0 && incomingByte <= 40) targetTemp = incomingByte;
+    if (incomingByte >= minTargetTemp && incomingByte <= maxTargetTemp) targetTemp = (float)incomingByte;
+    else targetTemp = 0.0;
   }
 }
 
