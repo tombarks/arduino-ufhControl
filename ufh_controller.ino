@@ -118,15 +118,15 @@ void loop() {
 void computeDuty() {
   static float integralDuty = 0.0;
   
-  float baseDuty  = 0.0
+  float baseDuty  = 0.0;
   
   if(targetTemp > minTargetTemp)
   {
-    baseDuty = 100.0 * ((targetTemp - minTargetTemp) / (maxTargetTemp - minTargetTemp))
+    baseDuty = 100.0 * ((targetTemp - minTargetTemp) / (maxTargetTemp - minTargetTemp));
   }
   
   if(middleFloorTempFilter.output() < (targetTemp - tempDeadband))integralDuty += 0.05;
-  else if(middleFloorTempFilter.output() > (targetTemp + tempDeadband)integralDuty -= 0.05;
+  else if(middleFloorTempFilter.output() > (targetTemp + tempDeadband))integralDuty -= 0.05;
   
   if(integralDuty > 100.0)integralDuty = 100.0;
   else if(integralDuty < -100.0)integralDuty = -100.0;
@@ -157,17 +157,15 @@ void controlPWMTimer() {
 
 //Compute on time
 void computeOnTime() {
-  //grab local copy of volatile varible
-  unsigned long onTimeCounterLocal;
   cli();
-  onTimeCounterLocal = onTimeCounter;
-  sei();
-
+  
   //15625hz timer
-  while (onTimeCounterLocal >= 15625) {
-    onTimeCounterLocal -= 15625;
+  while (onTimeCounter >= 15625) {
+    onTimeCounter -= 15625;
     onTimeSeconds++;
   }
+  
+  sei();
 }
 
 //read target temperature from serial
