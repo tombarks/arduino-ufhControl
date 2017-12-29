@@ -18,6 +18,45 @@
 FilterOnePole subFloorTempFilter(LOWPASS, 0.0001);
 FilterOnePole middleFloorTempFilter(LOWPASS, 0.0001);
 
+//Variables to store data related to how long the ufh element has been active
+volatile unsigned long onTimeCounter = 0;
+unsigned long onTimeSeconds = 0;
+
+//Temperature control constants
+float targetTemp = 0.0;
+float minTargetTemp = 20.0;
+float maxTargetTemp = 35.0;
+float tempDeadband = 0.25;
+float tempIncrementalValue = 0.05;
+
+//Current duty cycle value
+float dutyCycle = 0;
+
+//Trigger for the timer1 compare overflow vector to disable timer1 interrupts at the end of a PWM cycle.
+volatile unsigned char disableTimerInterrupts = 0;
+
+//Task timer values to control recurring execution of tasks.
+
+//Send a JSON over serial
+long sendJSONTimer = 0;
+long sendJSONFreq = 30000; //30s
+
+//Read temperature sensors
+long readTempTimer = 0;
+long readTempFreq = 100; //100ms
+
+//Get any new target temperature value
+long getTargetTimer = 0;
+long getTargetFreq = 100; //100ms
+
+//Compute how long the UFH element has been active
+long computeOnTimeTimer = 0;
+long computeOnTimeFreq = 10000; //10s
+
+//Compute the duty cycle
+long computeDutyTimer = 0;
+long computeDutyFreq = 60000; //60s
+
 // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin 13 as an output.
@@ -48,36 +87,6 @@ void setup() {
 
   sei();
 }
-
-int ufhActive = 0;
-volatile unsigned long onTimeCounter = 0;
-unsigned long onTimeSeconds = 0;
-
-float targetTemp = 0.0;
-float minTargetTemp = 20.0;
-float maxTargetTemp = 35.0;
-float tempDeadband = 0.25;
-
-float dutyCycle = 0;
-
-volatile unsigned char disableTimerInterrupts = 0;
-
-long sendJSONTimer = 0;
-long sendJSONFreq = 30000; //30s
-
-long readTempTimer = 0;
-long readTempFreq = 100; //100ms
-
-long getTargetTimer = 0;
-long getTargetFreq = 100; //100ms
-
-long computeOnTimeTimer = 0;
-long computeOnTimeFreq = 10000; //10s
-
-long computeDutyTimer = 0;
-long computeDutyFreq = 60000; //60s
-
-int incomingByte = 0;
 
 // the loop function runs over and over again forever
 void loop() {
@@ -125,8 +134,8 @@ void computeDuty() {
     baseDuty = 100.0 * ((targetTemp - minTargetTemp) / (maxTargetTemp - minTargetTemp));
   }
   
-  if(middleFloorTempFilter.output() < (targetTemp - tempDeadband))integralDuty += 0.05;
-  else if(middleFloorTempFilter.output() > (targetTemp + tempDeadband))integralDuty -= 0.05;
+  if(middleFloorTempFilter.output() < (targetTemp - tempDeadband))integralDuty += tempIncrementalValue;
+  else if(middleFloorTempFilter.output() > (targetTemp + tempDeadband))integralDuty -= tempIncrementalValue;
   
   if(integralDuty > 100.0)integralDuty = 100.0;
   else if(integralDuty < -100.0)integralDuty = -100.0;
@@ -172,8 +181,8 @@ void computeOnTime() {
 void getTarget() {
   //Check for new target temp
   if (Serial.available() > 0) {
-    incomingByte = Serial.read();
-    if (incomingByte >= minTargetTemp && incomingByte <= maxTargetTemp) targetTemp = (float)incomingByte;
+    int incomingByte = Serial.read();
+    if(incomingByte >= minTargetTemp && incomingByte <= maxTargetTemp) targetTemp = (float)incomingByte;
     else targetTemp = 0.0;
   }
 }
